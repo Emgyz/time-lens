@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "TimeLens",
+  "version": "2.2.0",
+  "description": "Track time spent on selected websites, set limits, and use Focus Mode.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "idle",
+    "alarms",
+    "notifications",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "background": {
+    "service_worker": "code/background.js"
+  },
+  "action": {
+    "default_title": "TimeLens",
+    "default_popup": "pages/popup.html"
+  },
+  "options_page": "pages/options.html",
+  "icons": {
+    "16": "assets/icon.svg",
+    "32": "assets/icon.svg",
+    "48": "assets/icon.svg",
+    "128": "assets/icon.svg"
+  }
+}
