@@ -123,15 +123,19 @@ async function clearSession() {
 // 4. DATE / DOMAIN HELPERS
 // ============================================================
 
+
+// currently uses the devices timezone, so when the device changes date or time,
+// so does the extension (can cause inflated or negative trcaking times,
+// but since change device time is uncommon, it's probably fine... right?)
 function today() {
-  // Current implementation uses UTC dates.
-  //
-  // If desired later, this can be changed to local-midnight
-  // handling instead.
+  const d = new Date();
 
-  return new Date().toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
-
 
 // Normalize a domain:
 //
@@ -898,21 +902,22 @@ chrome.runtime.onMessage.addListener(
         await reconcile();
 
         const data = await getData();
-
         const days = [];
 
         for (let i = 29; i >= 0; i--) {
-          const date =
-            new Date(
-              Date.now() - i * DAY
-            )
-              .toISOString()
-              .slice(0, 10);
+          const d = new Date();
+
+          d.setDate(d.getDate() - i);
+
+          const date = [
+            d.getFullYear(),
+            String(d.getMonth() + 1).padStart(2, "0"),
+            String(d.getDate()).padStart(2, "0")
+          ].join("-");
 
           days.push({
             date,
-            data:
-              data.daily[date] || {}
+            data: data.daily[date] || {}
           });
         }
 
