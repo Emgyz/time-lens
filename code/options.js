@@ -384,10 +384,14 @@ $("exportCsv").onclick = async () => {
 
   link.href = url;
 
-  link.download =
-    `timelens-${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`;
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0")
+  ].join("-");
+
+  link.download = `timelens-${date}.csv`;
 
   document.body.appendChild(link);
 
