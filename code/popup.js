@@ -1,1 +1,231 @@
-const $ = id => document.getElementById(id); function fmt(s) { s = Math.max(0, Math.round(Number(s) || 0)); let h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${m}m` : `${m}m` } function total(d) { return Object.values(d || {}).reduce((a, b) => a + (Number(b) || 0), 0) } function n(x) { return (x || "").toLowerCase().replace(/^www\./, "").replace(/\.$/, "") } function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])) } (async () => { let s = await chrome.runtime.sendMessage({ type: "getSnapshot" }), a = s.days.slice(-7), b = s.days; $("today").textContent = fmt(total(s.today)); $("avg7").textContent = fmt(a.reduce((x, y) => x + total(y.data), 0) / 7); $("avg30").textContent = fmt(b.reduce((x, y) => x + total(y.data), 0) / 30); let mx = Math.max(1, ...a.map(x => total(x.data))); $("chart").innerHTML = a.map(x => `<div class="barwrap"><div class="bar" style="height:${Math.max(4, total(x.data) / mx * 100)}%"></div><small>${x.date.slice(5)}</small></div>`).join(""); $("sites").innerHTML = (s.settings.sites || []).filter(x => x.enabled).map(x => { let v = Number(s.today[n(x.domain)] || 0), p = x.limit ? Math.min(100, v / (x.limit * 60) * 100) : 0; return `<div class="site"><div><b>${esc(x.label || x.domain)}</b><span>${fmt(v)}${x.limit ? ` / ${x.limit}m` : ''}</span></div><div class="progress"><i style="width:${p}%"></i></div></div>` }).join("") || '<div class="muted">No tracked sites yet.</div>' })();
+const $ = id =>
+  document.getElementById(id);
+
+
+// ============================================================
+// Formatting
+// ============================================================
+
+function formatTime(seconds) {
+  seconds =
+    Math.max(
+      0,
+      Math.round(Number(seconds) || 0)
+    );
+
+  const hours =
+    Math.floor(seconds / 3600);
+
+  const minutes =
+    Math.floor(
+      (seconds % 3600) / 60
+    );
+
+  return hours
+    ? `${hours}h ${minutes}m`
+    : `${minutes}m`;
+}
+
+
+function totalTime(data) {
+  return Object
+    .values(data || {})
+    .reduce(
+      (total, value) =>
+        total + (Number(value) || 0),
+      0
+    );
+}
+
+
+function normalizeDomain(domain) {
+  return (domain || "")
+    .toLowerCase()
+    .replace(/^www\./, "")
+    .replace(/\.$/, "");
+}
+
+
+function escapeHtml(value) {
+  return String(value).replace(
+    /[&<>"']/g,
+    character => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[character])
+  );
+}
+
+
+// ============================================================
+// Main
+// ============================================================
+
+(async () => {
+
+  const snapshot =
+    await chrome.runtime.sendMessage({
+      type: "getSnapshot"
+    });
+
+
+  // ----------------------------------------------------------
+  // Overall statistics
+  // ----------------------------------------------------------
+
+  const todayTotal =
+    totalTime(snapshot.today);
+
+  const last7 =
+    snapshot.days.slice(-7);
+
+  const last30 =
+    snapshot.days;
+
+
+  $("today").textContent =
+    formatTime(todayTotal);
+
+
+  $("avg7").textContent =
+    formatTime(
+      last7.reduce(
+        (total, day) =>
+          total + totalTime(day.data),
+        0
+      ) / 7
+    );
+
+
+  $("avg30").textContent =
+    formatTime(
+      last30.reduce(
+        (total, day) =>
+          total + totalTime(day.data),
+        0
+      ) / 30
+    );
+
+
+  // ----------------------------------------------------------
+  // Chart
+  // ----------------------------------------------------------
+
+  const maximum =
+    Math.max(
+      1,
+      ...last7.map(day =>
+        totalTime(day.data)
+      )
+    );
+
+
+  $("chart").innerHTML =
+    last7
+      .map(day => {
+
+        const total =
+          totalTime(day.data);
+
+        const height =
+          Math.max(
+            4,
+            (total / maximum) * 100
+          );
+
+        return `
+          <div class="barwrap">
+            <div
+              class="bar"
+              style="height:${height}%"
+            ></div>
+
+            <small>
+              ${day.date.slice(5)}
+            </small>
+          </div>
+        `;
+      })
+      .join("");
+
+
+  // ----------------------------------------------------------
+  // Tracked-site display
+  // ----------------------------------------------------------
+  //
+  // IMPORTANT:
+  //
+  // snapshot.today may contain MANY domains.
+  //
+  // We only display domains that are currently enabled
+  // in settings.sites.
+  //
+  // Their historical data still exists even if they were
+  // previously removed from the tracking list.
+  //
+
+  const visibleSites =
+    (snapshot.settings.sites || [])
+      .filter(site => site.enabled);
+
+
+  $("sites").innerHTML =
+    visibleSites
+      .map(site => {
+
+        const domain =
+          normalizeDomain(site.domain);
+
+        const seconds =
+          Number(
+            snapshot.today[domain] || 0
+          );
+
+        const percentage =
+          site.limit
+            ? Math.min(
+                100,
+                seconds /
+                  (site.limit * 60) *
+                  100
+              )
+            : 0;
+
+        return `
+          <div class="site">
+
+            <div>
+              <b>
+                ${escapeHtml(
+                  site.label || site.domain
+                )}
+              </b>
+
+              <span>
+                ${formatTime(seconds)}
+
+                ${
+                  site.limit
+                    ? ` / ${site.limit}m`
+                    : ""
+                }
+              </span>
+            </div>
+
+            <div class="progress">
+              <i
+                style="width:${percentage}%"
+              ></i>
+            </div>
+
+          </div>
+        `;
+      })
+      .join("")
+    ||
+    '<div class="muted">No tracked sites yet.</div>';
+
+})();

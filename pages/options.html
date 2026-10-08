@@ -16,7 +16,29 @@
         <hr><label>Focus message <input id="focusMessage"></label>
         <label><input type="checkbox" id="notifications">Notifications</label>
         <button id="save">Save settings</button>
-        <button id="reset" class="danger">Reset usage data</button>
+
+        <section>
+            <h2>Data</h2>
+
+            <div class="data-buttons">
+                <button id="exportCsv">
+                    Export CSV
+                </button>
+
+                <button id="importCsv">
+                    Import CSV
+                </button>
+
+                <button id="reset">
+                    Reset Usage Data
+                </button>
+
+                <input id="importFile" type="file" accept=".csv,text/csv" hidden>
+            </div>
+
+            <div id="status" class="muted"></div>
+        </section>
+
         <p id="status" class="muted"></p>
     </main>
     <script src="../code/options.js"></script>

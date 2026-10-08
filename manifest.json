@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TimeLens",
-  "version": "2.2.0",
-  "description": "Track time spent on selected websites, set limits, and use Focus Mode.",
+  "version": "3.0.0",
+  "description": "Track time spent on websites, decrease social media usage, set limits, and use Focus Mode.",
   "permissions": [
     "storage",
     "tabs",
