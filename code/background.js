@@ -44,6 +44,9 @@ const ALARM_NAME = "timelens-minute";
 // One day in milliseconds.
 const DAY = 86400000;
 
+// Ignore stale tracking sessions after a long gap.
+const MAX_SESSION_GAP_MS = 15 * 60 * 1000; // 15 minutes
+
 
 // ============================================================
 // 2. RUNTIME STATE
@@ -291,6 +294,7 @@ async function getActiveTab(windowId) {
 //
 // ============================================================
 
+
 async function accrueTime(now = Date.now()) {
   const data = await getData();
   const session = data.session;
@@ -313,16 +317,30 @@ async function accrueTime(now = Date.now()) {
   const startedAt = Number(session.startedAt);
 
   if (!Number.isFinite(startedAt)) {
+    // Invalid session: discard it rather than risk
+    // recording an incorrect amount of time.
+    await clearSession();
     return data;
   }
 
-  if (now <= startedAt) {
+  const elapsedMs = now - startedAt;
+
+  // Ignore invalid time differences and stale sessions.
+  // This prevents overnight or shutdown gaps being counted.
+  const MAX_SESSION_GAP_MS = 5 * 60 * 1000;
+
+  if (
+    elapsedMs < 0 ||
+    elapsedMs > MAX_SESSION_GAP_MS
+  ) {
+    session.startedAt = now;
+
+    await chrome.storage.local.set({ session });
+
     return data;
   }
 
-  const seconds = Math.floor(
-    (now - startedAt) / 1000
-  );
+  const seconds = Math.floor(elapsedMs / 1000);
 
   if (seconds <= 0) {
     return data;
@@ -340,11 +358,8 @@ async function accrueTime(now = Date.now()) {
     (Number(data.daily[date][domain]) || 0) +
     seconds;
 
-  // Move session start forward.
-  //
-  // This prevents the same elapsed period from being
-  // counted again on the next alarm/event.
-
+  // Move session start forward so elapsed time
+  // cannot be counted twice.
   session.startedAt = now;
 
   await chrome.storage.local.set({
@@ -354,7 +369,6 @@ async function accrueTime(now = Date.now()) {
 
   return data;
 }
-
 
 // ============================================================
 // 7. START / CHANGE CURRENT SESSION
